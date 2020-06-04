@@ -27,23 +27,23 @@ class pid:
         self.dt = (newTime - self.oldTime) if (self.oldTime != 0) else 0
         self.oldTime = newTime
         self.output = self.derivative() + self.proportional(self.newErr) + self.integral(self.newErr)
-        print("Error ", self.newErr)
+        # print("Error ", self.newErr)
 
    
     def proportional(self, err):
-        print(f"P {self.p * err}" )
+        #print(f"P {self.p * err}" )
         return self.p * err
 
 
     def integral(self, err):
         self.iVal += self.i * err * self.dt
-        print("I ", self.iVal)
+        #print("I ", self.iVal)
         return self.iVal
     
     def derivative(self):
         D = (self.d * (self.dE/self.dt)) if self.dt != 0 else 0
-        print(self.dE)
-        print("D ", D)
+        #print(self.dE)
+        #print("D ", D)
         return D
     
 if __name__ == "__main__":

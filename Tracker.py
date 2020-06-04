@@ -5,15 +5,18 @@ import time
 import sys
 import controller
 import random
-
+from pid import pid
 
 face_cascade = cv2.CascadeClassifier("venv/Lib/site-packages/cv2/data/haarcascade_frontalface_default.xml")
 profile_cascade = cv2.CascadeClassifier("venv/Lib/site-packages/cv2/data/haarcascade_profileface.xml")
 
 cap = cv2.VideoCapture(0)
 FRAME_WIDTH = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-FRAME_HIGHT = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+FRAME_HEIGHT = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 RATE = cap.get(cv2.CAP_PROP_FPS)
+
+pidX = pid(0.4, 0.05, 0.02)
+pidY = pid(0.4, 0.05, 0.02)
 
 ####### Constants ###### 
 
@@ -49,6 +52,8 @@ def servo_yangle(ypos, fov_offset=70): #  function for when camera is stationary
 
 currentangleY = 90
 
+
+'''
 def trackY(ypos, fov_offset):
     global currentangleY
     global SPEED
@@ -74,7 +79,7 @@ def trackY(ypos, fov_offset):
         else:
             return int(currentangleY)
 
-
+'''
 
 
 #  Track X tracks the displacement of the center of the face relative to the image center
@@ -83,6 +88,7 @@ def trackY(ypos, fov_offset):
 
 currentangleX = 90
 
+'''
 def trackX(xpos, fov_offset): 
     global currentangleX
     global SPEED
@@ -106,6 +112,27 @@ def trackX(xpos, fov_offset):
             return 180
         else:
             return int(currentangleX)
+
+'''
+fov_offset = 70
+
+Xscale = (90 - fov_offset) / (FRAME_WIDTH / 2)
+Yscale = (90 - fov_offset) / (FRAME_HEIGHT / 2)
+
+def trackX(xpos):
+    displacement_angle = (xpos - (FRAME_WIDTH / 2)) * Xscale
+    pidX.update(currentangleX, 90 - displacement_angle)
+    
+    return pidX.output
+
+
+def trackY(ypos):
+    displacement_angle = (ypos - (FRAME_HEIGHT / 2)) * Yscale
+    pidY.update(currentangleY, 90 - displacement_angle)
+    
+    return pidY.output
+
+
 
 #  only track the desiplacement
 #  is used for steppermotors, does the same as TrackX but without the counter
@@ -196,7 +223,7 @@ class Tracker:
             
             ret, img = cap.read()
 
-            cv2.resizeWindow("win", (int(FRAME_WIDTH * 1.5), int(FRAME_HIGHT * 1.5)))
+            cv2.resizeWindow("win", (int(FRAME_WIDTH * 1.5), int(FRAME_HEIGHT * 1.5)))
 
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             grayinverse = cv2.flip(gray, 1) #  flipped image for profiles
@@ -221,7 +248,7 @@ class Tracker:
                 idleFrameCount = 0
 
             if idleFrameCount > patrolAwait:
-                patrol(1, 2)
+                pass # patrol(1, 2)
 
             
             
@@ -238,12 +265,14 @@ class Tracker:
 
 
 
-                # xpos = trackX(mouth_xy[0], 70) #  only if x is a Servo
-                ypos = trackY(mouth_xy[1], 70) 
-                xstep = trackXdisp(mouth_xy[0], 70)
+                xpos = trackX(mouth_xy[0]) #  only if x is a Servo
+                ypos = trackY(mouth_xy[1]) 
+                #xstep = trackXdisp(mouth_xy[0], 70)
                 
-                turret.gotoY(ypos)
-                turret.step(-xstep) #  flip step for right direction
+
+
+                turret.gotoY(currentangleY + pidY.output)
+                turret.step(pidX.output)
 
 
 
@@ -255,7 +284,7 @@ class Tracker:
 
                 ######## debug info #########
 
-                sys.stdout.write("\r" + "mouth @ x: " + str(mouth_xy[0]) + " | "+  str(-xstep) + "steps in x || y: " + str(mouth_xy[1]) + " | " + str(ypos) + "°")
+                sys.stdout.write("\r" + "mouth @ x: " + str(mouth_xy[0]) + " | "+  str(pidX.output) + "steps in x || y: " + str(mouth_xy[1]) + " | " + str(ypos) + "°")
                 
                 
             cv2.imshow("win", img)
@@ -265,7 +294,8 @@ class Tracker:
         
 
 if __name__ == "__main__":
-    turret = controller.Turret("COM6")
+    print("\nStarting the engines...\n")
+    turret = controller.Turret("COM3")
     Tracker = Tracker()
     Tracker.mainloop()
-    print("\nStarting the engines...\n")
+    

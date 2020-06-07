@@ -15,8 +15,8 @@ FRAME_WIDTH = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 FRAME_HEIGHT = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 RATE = cap.get(cv2.CAP_PROP_FPS)
 
-pidX = pid(0.4, 0.05, 0.02)
-pidY = pid(0.4, 0.05, 0.02)
+pidX = pid(0.1, 0.3, 0.05)
+pidY = pid(0.1, 0.3, 0.05)
 
 ####### Constants ###### 
 
@@ -38,7 +38,7 @@ def servo_xangle(xpos, fov_offset=70):  #  function for when camera is stationar
 
 
 def servo_yangle(ypos, fov_offset=70): #  function for when camera is stationary
-    scale = (90 - fov_offset) / (FRAME_HIGHT / 2)
+    scale = (90 - fov_offset) / (FRAME_HEIGHT / 2)
     angle = ypos * scale + fov_offset
     if angle < 85:
         return 85
@@ -50,7 +50,7 @@ def servo_yangle(ypos, fov_offset=70): #  function for when camera is stationary
 #  and creates an angle which is scaled according to the viewport
 #  This angle gets added to the current angle Y to make up the angle sent to the servo
 
-currentangleY = 90
+
 
 
 '''
@@ -86,7 +86,7 @@ def trackY(ypos, fov_offset):
 #  and creates an angle which is scaled according to the viewport
 #  This angle gets added to the current angle X to make up the angle sent to the servo
 
-currentangleX = 90
+
 
 '''
 def trackX(xpos, fov_offset): 
@@ -119,16 +119,24 @@ fov_offset = 70
 Xscale = (90 - fov_offset) / (FRAME_WIDTH / 2)
 Yscale = (90 - fov_offset) / (FRAME_HEIGHT / 2)
 
+
+currentangleY = 90
+currentangleX = 90
+
 def trackX(xpos):
-    displacement_angle = (xpos - (FRAME_WIDTH / 2)) * Xscale
-    pidX.update(currentangleX, 90 - displacement_angle)
+    
+    displacement_angleX = (xpos - (FRAME_WIDTH / 2)) * Xscale
+    if xpos > 0:
+        pidX.update(currentangleX, 90 - displacement_angleX)
     
     return pidX.output
 
 
 def trackY(ypos):
-    displacement_angle = (ypos - (FRAME_HEIGHT / 2)) * Yscale
-    pidY.update(currentangleY, 90 - displacement_angle)
+    
+    displacement_angleY = (ypos - (FRAME_HEIGHT / 2)) * Yscale
+    if ypos > 0:
+        pidY.update(currentangleY, 90 - displacement_angleY)
     
     return pidY.output
 
@@ -198,7 +206,7 @@ def patrol(speedX, speedY):
 
 
 ######## The Face Tracking ########
-cv2.namedWindow("win", cv2.WINDOW_FREERATIO)
+#cv2.namedWindow("win", cv2.WINDOW_FREERATIO)
 idleFrameCount = 0
 
 
@@ -219,6 +227,8 @@ class Tracker:
 
         while self.Tracking:
             
+            pidX.interval()
+            pidY.interval()
             
             
             ret, img = cap.read()
@@ -295,7 +305,12 @@ class Tracker:
 
 if __name__ == "__main__":
     print("\nStarting the engines...\n")
-    turret = controller.Turret("COM3")
+    try:
+        turret = controller.Turret("COM3")
+    except FileNotFoundError as err:
+        print("Try a different COM Port" , err)
+   
+    
     Tracker = Tracker()
     Tracker.mainloop()
     

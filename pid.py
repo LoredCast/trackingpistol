@@ -17,18 +17,25 @@ class pid:
     newError = 0
     dE = 0
     output = 0
+    current = 0
+    target = 0
     def update(self, current, target):
-
+        self.target = target
+        self.current = current
         self.newErr = target - current
         self.dE = self.newErr - self.oldErr
         self.oldErr = self.newErr
 
-        newTime = time.time()
-        self.dt = (newTime - self.oldTime) if (self.oldTime != 0) else 0
-        self.oldTime = newTime
+        
         self.output = self.derivative() + self.proportional(self.newErr) + self.integral(self.newErr)
+        return self.output
         # print("Error ", self.newErr)
 
+    def interval(self):
+        newTime = time.time()
+        print(newTime)
+        self.dt = (newTime - self.oldTime)
+        self.oldTime = newTime
    
     def proportional(self, err):
         #print(f"P {self.p * err}" )
